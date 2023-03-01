@@ -4,8 +4,10 @@
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFi.h>
 #include <Wire.h>
+#include <TridentTD_LineNotify.h>
 
 #define DHTPin D7
+#define RelayPin D0
 
 #define         Board                   ("Arduino UNO")
 #define         Pin                     (A0)  //Analog input 3 of your arduino
@@ -19,6 +21,8 @@
 #define BLYNK_TEMPLATE_NAME "kasukabe"
 #define BLYNK_AUTH_TOKEN "lq0krE4FHp2xOnSFw23MX7T0RDj7PVIP"
 
+#define LINE_TOKEN "OZCd13CEHx6cBgrWvUVtnz2THL5ZoDx4J9nIqvtu1aK"
+
 char ssid[] = "lawiet";
 char pass[] = "kvnn6518";
 
@@ -28,10 +32,13 @@ DHT dht;
 void setup() {
   Serial.begin(9600);
 
+  LINE.setToken(LINE_TOKEN);
+
   pinMode(D3, OUTPUT);
   pinMode(D5, OUTPUT);
   pinMode(D6, OUTPUT);
   pinMode(D8, OUTPUT);
+  pinMode(RelayPin, OUTPUT);
   
   dht.setup(DHTPin);
 
@@ -58,7 +65,17 @@ void display() {
     byte LPG = MQ2.readSensor();
     Blynk.virtualWrite(V4, temp);
     Blynk.virtualWrite(V5, LPG);
-    Serial.printf("temp -> %.2f \n", dht.getTemperature());
+    int pureLPG = MQ2.readSensor();
+    float pureTemp = dht.getTemperature();
+    if (pureLPG >= 100){
+      LINE.notifySticker("LPG gas leaks > 100 ppm", 6632, 11825375);
+      delay(10000);
+    }
+    if (pureTemp >= 25){
+      digitalWrite(RelayPin, LOW);
+    } else {
+      digitalWrite(RelayPin, HIGH);
+    }
 }
 
 BLYNK_WRITE(V0) {
